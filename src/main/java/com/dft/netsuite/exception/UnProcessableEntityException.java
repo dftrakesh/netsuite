@@ -1,4 +1,4 @@
-package com.dft.katana.exception;
+package com.dft.netsuite.exception;
 
 public class UnProcessableEntityException extends Exception{
     private static final String DEFAULT_MESSAGE = "The requested resource cannot be processed";

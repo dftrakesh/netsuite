@@ -1,7 +1,8 @@
-package com.dft.katana;
+package com.dft.netsuite;
 
-import com.dft.katana.model.credentials.AccessCredentials;
+import com.dft.netsuite.model.credentials.AccessCredentials;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import lombok.SneakyThrows;
 
 import java.net.URI;
@@ -12,8 +13,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import static com.dft.katana.constantcodes.ConstantCode.BASE_ENDPOINT;
-import static com.dft.katana.constantcodes.ConstantCode.HTTPS;
+import static com.dft.netsuite.constantcodes.ConstantCode.BASE_ENDPOINT;
+import static com.dft.netsuite.constantcodes.ConstantCode.HTTPS;
 
 public class NetsuiteSDK {
 
@@ -78,7 +79,10 @@ public class NetsuiteSDK {
 
         return client
             .sendAsync(request, handler)
-            .thenComposeAsync(response -> tryResend(client, request, handler, response, 1))
+            .thenCompose(response -> {
+                System.out.println(response.body());
+                return tryResend(client, request, handler, response, 1);
+            })
             .get()
             .body();
     }

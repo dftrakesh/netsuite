@@ -1,4 +1,4 @@
-package com.dft.katana.handler;
+package com.dft.netsuite.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 

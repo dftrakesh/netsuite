@@ -1,4 +1,4 @@
-package com.dft.katana.model.credentials;
+package com.dft.netsuite.model.credentials;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;

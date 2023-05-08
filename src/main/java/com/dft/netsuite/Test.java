@@ -1,8 +1,7 @@
-package com.dft.katana;
+package com.dft.netsuite;
 
-import com.dft.katana.model.credentials.AccessCredentials;
-import com.dft.katana.model.credentials.AccessToken;
-import com.dft.katana.model.credentials.RequestAccessToken;
+import com.dft.netsuite.model.credentials.AccessCredentials;
+import com.dft.netsuite.model.credentials.RequestAccessToken;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import lombok.SneakyThrows;

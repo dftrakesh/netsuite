@@ -1,4 +1,4 @@
-package com.dft.katana.exception;
+package com.dft.netsuite.exception;
 
 public class NotFoundException extends Exception{
     private static final String DEFAULT_MESSAGE = "The requested resource could not be found";
