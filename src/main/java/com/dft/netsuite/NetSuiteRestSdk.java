@@ -1,55 +1,44 @@
 package com.dft.netsuite;
 
 import com.dft.netsuite.model.credentials.AccessCredentials;
+import com.dft.netsuite.model.credentials.AuthCredentials;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
 import lombok.SneakyThrows;
 
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-import static com.dft.netsuite.constantcodes.ConstantCode.BASE_ENDPOINT;
-import static com.dft.netsuite.constantcodes.ConstantCode.HTTPS;
+import static com.dft.netsuite.constantcodes.ConstantCode.AUTHORIZE_ENDPOINT;
 
-public class NetsuiteSDK {
+public class NetSuiteRestSdk {
 
-    protected final AccessCredentials accessCredentials;
     protected final HttpClient client;
+    protected final String netSuiteDomain;
     protected final ObjectMapper objectMapper;
+    protected final AuthCredentials authCredentials;
+
+    protected AccessCredentials accessCredentials;
+
     int MAX_ATTEMPTS = 50;
     int TIME_OUT_DURATION = 60000;
 
-    public NetsuiteSDK(AccessCredentials accessCredentials) {
-        this.accessCredentials = accessCredentials;
-        client = HttpClient.newHttpClient();
+    @SneakyThrows
+    public NetSuiteRestSdk(AuthCredentials authCredentials) {
+        this.authCredentials = authCredentials;
         this.objectMapper = new ObjectMapper();
-    }
+        this.client = HttpClient.newHttpClient();
+        this.accessCredentials = null;
+        this.netSuiteDomain = "https://" + this.authCredentials.getInstanceId() + ".app.netsuite.com";
 
-//    @SneakyThrows
-//    protected HttpRequest get(URI uri) {
-//        return HttpRequest.newBuilder(uri)
-//            .header(AUTHORIZATION, BEARER + accessCredentials)
-//            .header(CONTENT_TYPE, "application/json")
-//            .header(ACCEPT, "application/json")
-//            .GET()
-//            .build();
-//    }
-//
-//
-//    @SneakyThrows
-//    protected HttpRequest post(URI uri, String jsonBody) {
-//        return HttpRequest.newBuilder(uri)
-//            .header(AUTHORIZATION, BEARER + accessCredentials)
-//            .header(CONTENT_TYPE, "application/json")
-//            .header(ACCEPT, "application/json")
-//            .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
-//            .build();
-//    }
+    }
 
     @SneakyThrows
     protected URI addParameters(URI uri, HashMap<String, String> params) {
@@ -71,7 +60,7 @@ public class NetsuiteSDK {
 
     @SneakyThrows
     protected URI baseUrl(String path) {
-        return new URI(HTTPS + accessCredentials.getAccountId() + BASE_ENDPOINT + path);
+        return new URI(this.netSuiteDomain + path);
     }
 
     @SneakyThrows
@@ -79,10 +68,7 @@ public class NetsuiteSDK {
 
         return client
             .sendAsync(request, handler)
-            .thenCompose(response -> {
-                System.out.println(response.body());
-                return tryResend(client, request, handler, response, 1);
-            })
+            .thenCompose(response -> tryResend(client, request, handler, response, 1))
             .get()
             .body();
     }
@@ -100,5 +86,25 @@ public class NetsuiteSDK {
         return CompletableFuture.completedFuture(resp);
     }
 
+    public String getAuthorizationUrl(String redirectUrl) {
+        return this.netSuiteDomain + AUTHORIZE_ENDPOINT + "?"
+            + "scope=" + authCredentials.getScope() + "&"
+            + "redirect_uri=" + URLEncoder.encode(redirectUrl, StandardCharsets.UTF_8) + "&"
+            + "response_type=code&"
+            + "client_id=" + authCredentials.getClientId() + "&"
+            + "state=" + UUID.randomUUID().toString().replace("-", "");
+    }
 
+    public HttpRequest.BodyPublisher ofFormData(Map<Object, Object> data) {
+        var builder = new StringBuilder();
+        for (Map.Entry<Object, Object> entry : data.entrySet()) {
+            if (builder.length() > 0) {
+                builder.append("&");
+            }
+            builder.append(entry.getKey().toString());
+            builder.append("=");
+            builder.append(entry.getValue().toString());
+        }
+        return HttpRequest.BodyPublishers.ofString(builder.toString());
+    }
 }

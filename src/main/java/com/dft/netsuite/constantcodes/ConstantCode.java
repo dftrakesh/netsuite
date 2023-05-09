@@ -2,11 +2,6 @@ package com.dft.netsuite.constantcodes;
 
 public interface ConstantCode {
 
-    String AUTHORIZATION = "Authorization";
-    String BEARER = "Bearer ";
-    String BASE_ENDPOINT = ".app.netsuite.com";
-    String HTTPS = "https://";
-    String CONTENT_TYPE = "Content-Type";
-    String X_WWW_FORM_URLENCODED = "x-www-form-urlencoded";
-    String ACCEPT = "Accept";
+    String AUTHORIZE_ENDPOINT = "/app/login/oauth2/authorize.nl";
+    String TOKEN_ENDPOINT = "/services/rest/auth/oauth2/v1/token";
 }
