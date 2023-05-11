@@ -1,7 +1,8 @@
 package com.dft.netsuite;
 
-import com.dft.netsuite.model.credentials.AccessCredentials;
-import com.dft.netsuite.model.credentials.AuthCredentials;
+import com.dft.netsuite.handler.JsonBodyHandler;
+import com.dft.netsuite.model.credentials.AccessToken;
+import com.dft.netsuite.model.credentials.Credentials;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
 
@@ -11,33 +12,104 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+import static com.dft.netsuite.constantcodes.ConstantCode.ACCEPT;
+import static com.dft.netsuite.constantcodes.ConstantCode.APPLICATION_JSON;
+import static com.dft.netsuite.constantcodes.ConstantCode.AUTHORIZATION;
 import static com.dft.netsuite.constantcodes.ConstantCode.AUTHORIZE_ENDPOINT;
+import static com.dft.netsuite.constantcodes.ConstantCode.BEARER;
+import static com.dft.netsuite.constantcodes.ConstantCode.CONTENT_TYPE;
+import static com.dft.netsuite.constantcodes.ConstantCode.TOKEN_ENDPOINT;
+import static com.dft.netsuite.constantcodes.ConstantCode.X_WWW_FORM_URLENCODED;
 
 public class NetSuiteRestSdk {
 
     protected final HttpClient client;
     protected final String netSuiteDomain;
     protected final ObjectMapper objectMapper;
-    protected final AuthCredentials authCredentials;
-
-    protected AccessCredentials accessCredentials;
+    protected final Credentials credentials;
 
     int MAX_ATTEMPTS = 50;
     int TIME_OUT_DURATION = 60000;
 
     @SneakyThrows
-    public NetSuiteRestSdk(AuthCredentials authCredentials) {
-        this.authCredentials = authCredentials;
+    public NetSuiteRestSdk(Credentials credentials) {
         this.objectMapper = new ObjectMapper();
         this.client = HttpClient.newHttpClient();
-        this.accessCredentials = null;
-        this.netSuiteDomain = "https://" + this.authCredentials.getInstanceId() + ".app.netsuite.com";
+        this.credentials = credentials;
+        this.netSuiteDomain = "https://" + this.credentials.getInstanceId() + ".app.netsuite.com";
+    }
 
+    @SneakyThrows
+    public AccessToken createToken(String code, String redirectUrl) {
+        Map<Object, Object> data = new HashMap<>();
+        data.put("code", code);
+        data.put("redirect_uri", redirectUrl);
+        data.put("grant_type", "authorization_code");
+
+        return getToken(data);
+    }
+
+    @SneakyThrows
+    public AccessToken refreshToken() {
+        Map<Object, Object> data = new HashMap<>();
+        data.put("refresh_token", credentials.getRefreshToken());
+        data.put("grant_type", "refresh_token");
+
+        return getToken(data);
+    }
+
+    @SneakyThrows
+    public AccessToken getToken(Map<Object, Object> data) {
+        String strBasicAuth = this.credentials.getClientId() + ":" + this.credentials.getClientSecret();
+        String basicAuthBase64 = Base64.getEncoder().encodeToString(strBasicAuth.getBytes(StandardCharsets.UTF_8));
+        URI uri = URI.create(netSuiteDomain + TOKEN_ENDPOINT);
+
+        HttpRequest request = HttpRequest.newBuilder(uri)
+            .header(CONTENT_TYPE, X_WWW_FORM_URLENCODED)
+            .header(AUTHORIZATION, "Basic " + basicAuthBase64)
+            .header(ACCEPT, APPLICATION_JSON)
+            .POST(ofFormData(data))
+            .build();
+
+        HttpResponse.BodyHandler<AccessToken> handler = new JsonBodyHandler<>(AccessToken.class);
+        AccessToken accessToken = getRequestWrapped(request, handler);
+        LocalDateTime dateTime = LocalDateTime.now().plusSeconds(accessToken.getExpiresIn());
+        accessToken.setExpireAt(dateTime);
+
+        String refreshToken =  credentials.getRefreshToken();
+        if (accessToken.getRefreshToken() != null) refreshToken = accessToken.getRefreshToken();
+
+        credentials.setAccessToken(accessToken.getAccessToken());
+        credentials.setRefreshToken(refreshToken);
+        credentials.setExpireAt(accessToken.getExpireAt());
+
+        return accessToken;
+    }
+
+    @SneakyThrows
+    public Credentials getAccessCredentials() {
+        if (credentials.getExpireAt() != null && !LocalDateTime.now().isAfter(credentials.getExpireAt()))
+            return credentials;
+        if (credentials.getRefreshToken() != null) refreshToken();
+        return credentials;
+    }
+
+    @SneakyThrows
+    public HttpRequest get(URI uri) {
+
+        return HttpRequest.newBuilder(uri)
+            .header(CONTENT_TYPE, X_WWW_FORM_URLENCODED)
+            .header(AUTHORIZATION, BEARER + credentials.getAccessToken())
+            .header(ACCEPT, APPLICATION_JSON)
+            .GET()
+            .build();
     }
 
     @SneakyThrows
@@ -56,11 +128,6 @@ public class NetSuiteRestSdk {
             builder.append(keyValueParam);
         }
         return new URI(uri.getScheme(), uri.getAuthority(), uri.getPath(), builder.toString(), uri.getFragment());
-    }
-
-    @SneakyThrows
-    protected URI baseUrl(String path) {
-        return new URI(this.netSuiteDomain + path);
     }
 
     @SneakyThrows
@@ -88,10 +155,10 @@ public class NetSuiteRestSdk {
 
     public String getAuthorizationUrl(String redirectUrl) {
         return this.netSuiteDomain + AUTHORIZE_ENDPOINT + "?"
-            + "scope=" + authCredentials.getScope() + "&"
+            + "scope=" + credentials.getScope() + "&"
             + "redirect_uri=" + URLEncoder.encode(redirectUrl, StandardCharsets.UTF_8) + "&"
             + "response_type=code&"
-            + "client_id=" + authCredentials.getClientId() + "&"
+            + "client_id=" + credentials.getClientId() + "&"
             + "state=" + UUID.randomUUID().toString().replace("-", "");
     }
 
