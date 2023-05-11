@@ -83,7 +83,7 @@ public class NetSuiteRestSdk {
         LocalDateTime dateTime = LocalDateTime.now().plusSeconds(accessToken.getExpiresIn());
         accessToken.setExpireAt(dateTime);
 
-        String refreshToken =  credentials.getRefreshToken();
+        String refreshToken = credentials.getRefreshToken();
         if (accessToken.getRefreshToken() != null) refreshToken = accessToken.getRefreshToken();
 
         credentials.setAccessToken(accessToken.getAccessToken());
@@ -113,6 +113,16 @@ public class NetSuiteRestSdk {
     }
 
     @SneakyThrows
+    protected HttpRequest post(URI uri, String jsonBody) {
+        return HttpRequest.newBuilder(uri)
+            .header(CONTENT_TYPE, APPLICATION_JSON)
+            .header(AUTHORIZATION, BEARER + credentials.getAccessToken())
+            .header(ACCEPT, APPLICATION_JSON)
+            .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+            .build();
+    }
+
+    @SneakyThrows
     protected URI addParameters(URI uri, HashMap<String, String> params) {
 
         if (params == null) return uri;
@@ -138,6 +148,15 @@ public class NetSuiteRestSdk {
             .thenCompose(response -> tryResend(client, request, handler, response, 1))
             .get()
             .body();
+    }
+
+    @SneakyThrows
+    protected Integer getRequestWrappedV2(HttpRequest request) {
+
+        return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+            .thenComposeAsync(response -> tryResend(client, request, HttpResponse.BodyHandlers.ofString(), response, 1))
+            .thenApplyAsync(HttpResponse::statusCode)
+            .get();
     }
 
     @SneakyThrows
