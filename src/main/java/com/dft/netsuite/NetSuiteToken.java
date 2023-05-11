@@ -19,8 +19,9 @@ import static com.dft.netsuite.constantcodes.ConstantCode.TOKEN_ENDPOINT;
 
 public class NetSuiteToken extends NetSuiteRestSdk {
 
-    public NetSuiteToken(AuthCredentials authCredentials) {
+    public NetSuiteToken(AuthCredentials authCredentials, AccessCredentials accessCredentials) {
         super(authCredentials);
+        this.accessCredentials = accessCredentials;
     }
 
     @SneakyThrows
@@ -75,13 +76,19 @@ public class NetSuiteToken extends NetSuiteRestSdk {
 
     @SneakyThrows
     public AccessCredentials getAccessCredentials() {
-        if (this.accessCredentials != null && !LocalDateTime.now().isAfter(accessCredentials.getExpireAt())) {
+        if (this.accessCredentials == null) return null;
+
+        if (accessCredentials.getAccessToken() != null
+            && accessCredentials.getExpireAt() != null
+            && !LocalDateTime.now().isAfter(accessCredentials.getExpireAt())) {
             return accessCredentials;
         }
 
-        AccessToken accessToken = refreshToken();
-        accessCredentials.setAccessToken(accessToken.getAccessToken());
-        accessCredentials.setExpireAt(LocalDateTime.now().plusSeconds(accessToken.getExpiresIn()));
+        if (accessCredentials.getRefreshToken() != null) {
+            AccessToken accessToken = refreshToken();
+            accessCredentials.setAccessToken(accessToken.getAccessToken());
+            accessCredentials.setExpireAt(LocalDateTime.now().plusSeconds(accessToken.getExpiresIn()));
+        }
 
         return accessCredentials;
     }

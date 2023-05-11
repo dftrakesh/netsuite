@@ -4,13 +4,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>io.github.dftrakesh</groupId>
-    <artifactId>netsuite</artifactId>
+    <artifactId>netsuite-admin-rest</artifactId>
     <version>0.1</version>
     <packaging>jar</packaging>
 
-    <name>netsuite</name>
+    <name>netsuite-admin-rest</name>
     <description>Netsuite API using JDK 11</description>
-    <url>https://github.com/dftrakesh/netsuite</url>
+    <url>https://github.com/dftrakesh/netsuite-admin-rest</url>
 
     <licenses>
         <license>
@@ -29,7 +29,7 @@
     </developers>
 
     <scm>
-        <url>https://github.com/dftrakesh/netsuite</url>
+        <url>https://github.com/dftrakesh/netsuite-admin-rest</url>
     </scm>
 
     <properties>
