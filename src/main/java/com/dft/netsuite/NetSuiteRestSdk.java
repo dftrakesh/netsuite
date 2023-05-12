@@ -43,7 +43,7 @@ public class NetSuiteRestSdk {
         this.objectMapper = new ObjectMapper();
         this.client = HttpClient.newHttpClient();
         this.credentials = credentials;
-        this.netSuiteDomain = "https://" + this.credentials.getInstanceId() + ".app.netsuite.com";
+        this.netSuiteDomain = "https://" + this.credentials.getInstanceId() + ".suitetalk.api.netsuite.com";
     }
 
     @SneakyThrows
@@ -69,7 +69,7 @@ public class NetSuiteRestSdk {
     public AccessToken getToken(Map<Object, Object> data) {
         String strBasicAuth = this.credentials.getClientId() + ":" + this.credentials.getClientSecret();
         String basicAuthBase64 = Base64.getEncoder().encodeToString(strBasicAuth.getBytes(StandardCharsets.UTF_8));
-        URI uri = URI.create(netSuiteDomain + TOKEN_ENDPOINT);
+        URI uri = URI.create("https://" + this.credentials.getInstanceId() + ".app.netsuite.com" + TOKEN_ENDPOINT);
 
         HttpRequest request = HttpRequest.newBuilder(uri)
             .header(CONTENT_TYPE, X_WWW_FORM_URLENCODED)
@@ -103,7 +103,7 @@ public class NetSuiteRestSdk {
 
     @SneakyThrows
     public HttpRequest get(URI uri) {
-
+        getAccessCredentials();
         return HttpRequest.newBuilder(uri)
             .header(CONTENT_TYPE, X_WWW_FORM_URLENCODED)
             .header(AUTHORIZATION, BEARER + credentials.getAccessToken())
@@ -114,12 +114,24 @@ public class NetSuiteRestSdk {
 
     @SneakyThrows
     protected HttpRequest post(URI uri, String jsonBody) {
+        getAccessCredentials();
         return HttpRequest.newBuilder(uri)
             .header(CONTENT_TYPE, APPLICATION_JSON)
             .header(AUTHORIZATION, BEARER + credentials.getAccessToken())
             .header(ACCEPT, APPLICATION_JSON)
             .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
             .build();
+    }
+
+    @SneakyThrows
+    protected HttpRequest post(URI uri, Object object) {
+        String jsonBody = objectMapper.writeValueAsString(object);
+        return post(uri, jsonBody);
+    }
+
+    @SneakyThrows
+    protected URI baseUrl(String path) {
+        return new URI(netSuiteDomain + path);
     }
 
     @SneakyThrows
@@ -173,7 +185,7 @@ public class NetSuiteRestSdk {
     }
 
     public String getAuthorizationUrl(String redirectUrl) {
-        return this.netSuiteDomain + AUTHORIZE_ENDPOINT + "?"
+        return "https://" + this.credentials.getInstanceId() + ".app.netsuite.com" + AUTHORIZE_ENDPOINT + "?"
             + "scope=" + credentials.getScope() + "&"
             + "redirect_uri=" + URLEncoder.encode(redirectUrl, StandardCharsets.UTF_8) + "&"
             + "response_type=code&"
