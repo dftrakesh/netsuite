@@ -1,5 +1,6 @@
 package com.dft.netsuite;
 
+import com.dft.netsuite.model.commen.ErrorObject;
 import com.dft.netsuite.model.credentials.Credentials;
 import com.dft.netsuite.model.invoice.InvoiceRequest;
 import lombok.SneakyThrows;
@@ -16,7 +17,7 @@ public class NetSuiteInvoice extends NetSuiteRestSdk {
     }
 
     @SneakyThrows
-    public Integer createInvoice(InvoiceRequest invoiceRequest) {
+    public ErrorObject createInvoice(InvoiceRequest invoiceRequest) {
         URI uri = baseUrl(INVOICE_ENDPOINT);
         HttpRequest request = post(uri, invoiceRequest);
         return getRequestWrappedV2(request);

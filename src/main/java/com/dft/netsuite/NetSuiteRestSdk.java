@@ -1,8 +1,10 @@
 package com.dft.netsuite;
 
 import com.dft.netsuite.handler.JsonBodyHandler;
+import com.dft.netsuite.model.commen.ErrorObject;
 import com.dft.netsuite.model.credentials.AccessToken;
 import com.dft.netsuite.model.credentials.Credentials;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
 
@@ -163,11 +165,23 @@ public class NetSuiteRestSdk {
     }
 
     @SneakyThrows
-    protected Integer getRequestWrappedV2(HttpRequest request) {
+    protected ErrorObject getRequestWrappedV2(HttpRequest request) {
 
         return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
             .thenComposeAsync(response -> tryResend(client, request, HttpResponse.BodyHandlers.ofString(), response, 1))
-            .thenApplyAsync(HttpResponse::statusCode)
+            .thenApplyAsync(stringHttpResponse -> {
+                String body = stringHttpResponse.body();
+                ErrorObject errorObject = new ErrorObject();
+                errorObject.setStatus(stringHttpResponse.statusCode());
+                if (body != null && !body.isEmpty()) {
+                    try {
+                        errorObject = objectMapper.readValue(body, ErrorObject.class);
+                    } catch (JsonProcessingException exception) {
+                        throw new Throwable("Error", exception);
+                    }
+                }
+                return errorObject;
+            })
             .get();
     }
 
