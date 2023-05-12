@@ -124,8 +124,8 @@ public class NetSuiteRestSdk {
     }
 
     @SneakyThrows
-    protected HttpRequest post(URI uri, Object object) {
-        String jsonBody = objectMapper.writeValueAsString(object);
+    protected HttpRequest post(URI uri, Object body) {
+        String jsonBody = objectMapper.writeValueAsString(body);
         return post(uri, jsonBody);
     }
 
