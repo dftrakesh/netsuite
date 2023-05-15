@@ -16,7 +16,6 @@ public class InvoiceRequest {
     private String otherRefNum;
     private ItemRoot item;
     private IdFiled location;
-    private PostingPeriod postingPeriod;
     private String salesEffectiveDate;
     private String shipDate;
     private IdFiled status;
