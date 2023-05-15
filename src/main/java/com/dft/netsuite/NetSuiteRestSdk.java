@@ -1,7 +1,7 @@
 package com.dft.netsuite;
 
 import com.dft.netsuite.handler.JsonBodyHandler;
-import com.dft.netsuite.model.commen.ErrorObject;
+import com.dft.netsuite.model.invoice.CreateInvoiceResponse;
 import com.dft.netsuite.model.credentials.AccessToken;
 import com.dft.netsuite.model.credentials.Credentials;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -164,19 +164,19 @@ public class NetSuiteRestSdk {
     }
 
     @SneakyThrows
-    protected ErrorObject getRequestWrappedV2(HttpRequest request) {
+    protected CreateInvoiceResponse getRequestWrappedV2(HttpRequest request) {
 
         return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
             .thenComposeAsync(response -> tryResend(client, request, HttpResponse.BodyHandlers.ofString(), response, 1))
             .thenApplyAsync(stringHttpResponse -> {
                 String body = stringHttpResponse.body();
-                ErrorObject errorObject = new ErrorObject();
-                errorObject.setStatus(stringHttpResponse.statusCode());
+                CreateInvoiceResponse createInvoiceResponse = new CreateInvoiceResponse();
+                createInvoiceResponse.setStatus(stringHttpResponse.statusCode());
 
                 if (body != null && !body.isEmpty()) {
-                    errorObject = convertBody(body, ErrorObject.class);
+                    createInvoiceResponse = convertBody(body, CreateInvoiceResponse.class);
                 }
-                return errorObject;
+                return createInvoiceResponse;
             })
             .get();
     }

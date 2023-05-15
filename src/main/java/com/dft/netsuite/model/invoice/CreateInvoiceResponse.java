@@ -1,4 +1,4 @@
-package com.dft.netsuite.model.commen;
+package com.dft.netsuite.model.invoice;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -8,7 +8,7 @@ import java.util.List;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class ErrorObject {
+public class CreateInvoiceResponse {
 
     private String type;
     private String title;
