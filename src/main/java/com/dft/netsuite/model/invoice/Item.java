@@ -9,6 +9,7 @@ public class Item {
     private IdFiled item;
     private Integer line;
     private IdFiled location;
+    private String taxDetailsReference;
     private Integer quantity;
     private Double rate;
 }
