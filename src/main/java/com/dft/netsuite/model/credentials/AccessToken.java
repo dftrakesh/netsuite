@@ -15,4 +15,5 @@ public class AccessToken {
     private Long expiresIn;
     private String tokenType;
     private LocalDateTime expireAt;
+    private String error;
 }

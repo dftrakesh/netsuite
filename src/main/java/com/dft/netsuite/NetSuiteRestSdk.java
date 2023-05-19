@@ -1,9 +1,9 @@
 package com.dft.netsuite;
 
 import com.dft.netsuite.handler.JsonBodyHandler;
-import com.dft.netsuite.model.invoice.CreateInvoiceResponse;
 import com.dft.netsuite.model.credentials.AccessToken;
 import com.dft.netsuite.model.credentials.Credentials;
+import com.dft.netsuite.model.invoice.CreateInvoiceResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
 
@@ -81,6 +81,7 @@ public class NetSuiteRestSdk {
 
         HttpResponse.BodyHandler<AccessToken> handler = new JsonBodyHandler<>(AccessToken.class);
         AccessToken accessToken = getRequestWrapped(request, handler);
+        if (accessToken.getError() != null) throw new Exception("AccessToken: " + accessToken.getError());
         LocalDateTime dateTime = LocalDateTime.now().plusSeconds(accessToken.getExpiresIn());
         accessToken.setExpireAt(dateTime);
 
