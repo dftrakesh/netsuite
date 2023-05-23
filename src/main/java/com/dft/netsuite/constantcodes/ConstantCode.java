@@ -9,6 +9,7 @@ public interface ConstantCode {
     String CONTENT_TYPE ="Content-Type";
     String X_WWW_FORM_URLENCODED ="application/x-www-form-urlencoded";
     String AUTHORIZATION ="Authorization";
+    String OAUTH_VERSION ="1.0";
     String BEARER ="Bearer ";
     String ACCEPT ="Accept";
     String APPLICATION_JSON ="application/json";
