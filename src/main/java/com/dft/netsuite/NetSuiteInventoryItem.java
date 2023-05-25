@@ -10,7 +10,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.HashMap;
 
-import static com.dft.netsuite.constantcodes.ConstantCode.INVENTORY_ITEM_ENDPOINT;
+import static com.dft.netsuite.constants.ConstantCode.INVENTORY_ITEM_ENDPOINT;
 
 public class NetSuiteInventoryItem extends NetSuiteRestSdk {
 

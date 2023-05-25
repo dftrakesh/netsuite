@@ -23,15 +23,15 @@ import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-import static com.dft.netsuite.constantcodes.ConstantCode.ACCEPT;
-import static com.dft.netsuite.constantcodes.ConstantCode.APPLICATION_JSON;
-import static com.dft.netsuite.constantcodes.ConstantCode.AUTHORIZATION;
-import static com.dft.netsuite.constantcodes.ConstantCode.AUTHORIZE_ENDPOINT;
-import static com.dft.netsuite.constantcodes.ConstantCode.BEARER;
-import static com.dft.netsuite.constantcodes.ConstantCode.CONTENT_TYPE;
-import static com.dft.netsuite.constantcodes.ConstantCode.OAUTH_VERSION;
-import static com.dft.netsuite.constantcodes.ConstantCode.TOKEN_ENDPOINT;
-import static com.dft.netsuite.constantcodes.ConstantCode.X_WWW_FORM_URLENCODED;
+import static com.dft.netsuite.constants.ConstantCode.ACCEPT;
+import static com.dft.netsuite.constants.ConstantCode.APPLICATION_JSON;
+import static com.dft.netsuite.constants.ConstantCode.AUTHORIZATION;
+import static com.dft.netsuite.constants.ConstantCode.AUTHORIZE_ENDPOINT;
+import static com.dft.netsuite.constants.ConstantCode.BEARER;
+import static com.dft.netsuite.constants.ConstantCode.CONTENT_TYPE;
+import static com.dft.netsuite.constants.ConstantCode.OAUTH_VERSION;
+import static com.dft.netsuite.constants.ConstantCode.TOKEN_ENDPOINT;
+import static com.dft.netsuite.constants.ConstantCode.X_WWW_FORM_URLENCODED;
 
 public class NetSuiteRestSdk {
 
@@ -62,12 +62,12 @@ public class NetSuiteRestSdk {
     }
 
     @SneakyThrows
-    public AccessToken refreshToken() {
+    public void refreshToken() {
         Map<Object, Object> data = new HashMap<>();
         data.put("refresh_token", credentials.getRefreshToken());
         data.put("grant_type", "refresh_token");
 
-        return getToken(data);
+        getToken(data);
     }
 
     @SneakyThrows
@@ -100,11 +100,10 @@ public class NetSuiteRestSdk {
     }
 
     @SneakyThrows
-    public Credentials getAccessCredentials() {
+    public void getAccessCredentials() {
         if (credentials.getExpireAt() != null && !LocalDateTime.now().isAfter(credentials.getExpireAt()))
-            return credentials;
+            return;
         if (credentials.getRefreshToken() != null) refreshToken();
-        return credentials;
     }
 
     @SneakyThrows
@@ -125,7 +124,7 @@ public class NetSuiteRestSdk {
 
     @SneakyThrows
     public String getAuthorizationHeader(URI uri) {
-        String encodedUrl = URLEncoder.encode(uri.toString(), StandardCharsets.UTF_8.name());
+        String encodedUrl = URLEncoder.encode(uri.toString(), StandardCharsets.UTF_8);
         String encodedHttpMethod = "GET";
         String consumerKey = credentials.getConsumerKey();
         String nonce = "" + (int) (Math.random() * 100000000);
@@ -147,26 +146,25 @@ public class NetSuiteRestSdk {
         String key = encodeKey(consumerSecret, tokenSecret);
         String signature = generateSignature(baseString, key);
 
-        StringBuilder authorizationHeader = new StringBuilder()
-            .append("OAuth oauth_consumer_key=\"")
-            .append(consumerKey)
-            .append("\", oauth_token=\"")
-            .append(tokenKey)
-            .append("\", oauth_nonce=\"")
-            .append(nonce)
-            .append("\", oauth_timestamp=\"")
-            .append(timestamp)
-            .append("\", oauth_signature_method=\"")
-            .append(signatureMethod)
-            .append("\", oauth_version=\"")
-            .append(OAUTH_VERSION)
-            .append("\", realm=\"")
-            .append(credentials.getRealm())
-            .append("\", oauth_signature=\"")
-            .append(signature)
-            .append("\"");
+        String authorizationHeader = "OAuth oauth_consumer_key=\"" +
+                consumerKey +
+                "\", oauth_token=\"" +
+                tokenKey +
+                "\", oauth_nonce=\"" +
+                nonce +
+                "\", oauth_timestamp=\"" +
+                timestamp +
+                "\", oauth_signature_method=\"" +
+                signatureMethod +
+                "\", oauth_version=\"" +
+                OAUTH_VERSION +
+                "\", realm=\"" +
+                credentials.getRealm() +
+                "\", oauth_signature=\"" +
+                signature +
+                "\"";
 
-        return authorizationHeader.toString();
+        return authorizationHeader;
     }
 
     @SneakyThrows
@@ -182,14 +180,11 @@ public class NetSuiteRestSdk {
             parameterString.append(entry.getValue());
         }
 
-        StringBuilder baseString = new StringBuilder();
-        baseString.append(encodedHttpMethod.toUpperCase());
-        baseString.append('&');
-        baseString.append(encodedUrl);
-        baseString.append('&');
-        baseString.append(URLEncoder.encode(parameterString.toString(), StandardCharsets.UTF_8.name()));
-
-        return baseString.toString();
+        return encodedHttpMethod.toUpperCase() +
+                '&' +
+                encodedUrl +
+                '&' +
+                URLEncoder.encode(parameterString.toString(), StandardCharsets.UTF_8);
     }
 
     @SneakyThrows
@@ -198,13 +193,13 @@ public class NetSuiteRestSdk {
         Mac mac = Mac.getInstance("HmacSHA256");
         mac.init(secretKeySpec);
         byte[] signatureBytes = mac.doFinal(baseString.getBytes(StandardCharsets.UTF_8));
-        return URLEncoder.encode(Base64.getEncoder().encodeToString(signatureBytes), StandardCharsets.UTF_8.toString());
+        return URLEncoder.encode(Base64.getEncoder().encodeToString(signatureBytes), StandardCharsets.UTF_8);
     }
 
     @SneakyThrows
     String encodeKey(String consumerSecret, String tokenSecret) {
-        String encodedConsumerSecret = URLEncoder.encode(consumerSecret, StandardCharsets.UTF_8.name());
-        String encodedTokenSecret = URLEncoder.encode(tokenSecret, StandardCharsets.UTF_8.name());
+        String encodedConsumerSecret = URLEncoder.encode(consumerSecret, StandardCharsets.UTF_8);
+        String encodedTokenSecret = URLEncoder.encode(tokenSecret, StandardCharsets.UTF_8);
         return encodedConsumerSecret + "&" + encodedTokenSecret;
     }
 

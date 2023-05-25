@@ -8,7 +8,7 @@ import lombok.SneakyThrows;
 import java.net.URI;
 import java.net.http.HttpRequest;
 
-import static com.dft.netsuite.constantcodes.ConstantCode.INVOICE_ENDPOINT;
+import static com.dft.netsuite.constants.ConstantCode.INVOICE_ENDPOINT;
 
 public class NetSuiteInvoice extends NetSuiteRestSdk {
 

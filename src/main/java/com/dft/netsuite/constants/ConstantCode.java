@@ -1,4 +1,4 @@
-package com.dft.netsuite.constantcodes;
+package com.dft.netsuite.constants;
 
 public interface ConstantCode {
 
