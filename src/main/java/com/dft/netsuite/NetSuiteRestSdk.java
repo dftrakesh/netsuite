@@ -3,10 +3,12 @@ package com.dft.netsuite;
 import com.dft.netsuite.handler.JsonBodyHandler;
 import com.dft.netsuite.model.credentials.AccessToken;
 import com.dft.netsuite.model.credentials.Credentials;
-import com.dft.netsuite.model.invoice.CreateInvoiceResponse;
+import com.dft.netsuite.model.invoice.Response;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -17,6 +19,7 @@ import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -26,6 +29,7 @@ import static com.dft.netsuite.constantcodes.ConstantCode.AUTHORIZATION;
 import static com.dft.netsuite.constantcodes.ConstantCode.AUTHORIZE_ENDPOINT;
 import static com.dft.netsuite.constantcodes.ConstantCode.BEARER;
 import static com.dft.netsuite.constantcodes.ConstantCode.CONTENT_TYPE;
+import static com.dft.netsuite.constantcodes.ConstantCode.OAUTH_VERSION;
 import static com.dft.netsuite.constantcodes.ConstantCode.TOKEN_ENDPOINT;
 import static com.dft.netsuite.constantcodes.ConstantCode.X_WWW_FORM_URLENCODED;
 
@@ -106,12 +110,102 @@ public class NetSuiteRestSdk {
     @SneakyThrows
     public HttpRequest get(URI uri) {
         getAccessCredentials();
+        String authorizationHeader = BEARER + credentials.getAccessToken();
+        if (credentials.getTokenBasedAuthentication()) {
+            authorizationHeader = getAuthorizationHeader(uri);
+        }
+
         return HttpRequest.newBuilder(uri)
             .header(CONTENT_TYPE, X_WWW_FORM_URLENCODED)
-            .header(AUTHORIZATION, BEARER + credentials.getAccessToken())
+            .header(AUTHORIZATION, authorizationHeader)
             .header(ACCEPT, APPLICATION_JSON)
             .GET()
             .build();
+    }
+
+    @SneakyThrows
+    public String getAuthorizationHeader(URI uri) {
+        String encodedUrl = URLEncoder.encode(uri.toString(), StandardCharsets.UTF_8.name());
+        String encodedHttpMethod = "GET";
+        String consumerKey = credentials.getConsumerKey();
+        String nonce = "" + (int) (Math.random() * 100000000);
+        String signatureMethod = "HMAC-SHA256";
+        String timestamp = String.valueOf(System.currentTimeMillis() / 1000);
+        String tokenKey = credentials.getTokenId();
+        String consumerSecret = credentials.getConsumerSecret();
+        String tokenSecret = credentials.getTokenSecret();
+
+        Map<String, String> parameters = new TreeMap<>();
+        parameters.put("oauth_consumer_key", consumerKey);
+        parameters.put("oauth_nonce", nonce);
+        parameters.put("oauth_signature_method", signatureMethod);
+        parameters.put("oauth_timestamp", timestamp);
+        parameters.put("oauth_token", tokenKey);
+        parameters.put("oauth_version", OAUTH_VERSION);
+
+        String baseString = generateSignatureBaseString(encodedHttpMethod, encodedUrl, parameters);
+        String key = encodeKey(consumerSecret, tokenSecret);
+        String signature = generateSignature(baseString, key);
+
+        StringBuilder authorizationHeader = new StringBuilder()
+            .append("OAuth oauth_consumer_key=\"")
+            .append(consumerKey)
+            .append("\", oauth_token=\"")
+            .append(tokenKey)
+            .append("\", oauth_nonce=\"")
+            .append(nonce)
+            .append("\", oauth_timestamp=\"")
+            .append(timestamp)
+            .append("\", oauth_signature_method=\"")
+            .append(signatureMethod)
+            .append("\", oauth_version=\"")
+            .append(OAUTH_VERSION)
+            .append("\", realm=\"")
+            .append(credentials.getRealm())
+            .append("\", oauth_signature=\"")
+            .append(signature)
+            .append("\"");
+
+        return authorizationHeader.toString();
+    }
+
+    @SneakyThrows
+    String generateSignatureBaseString(String encodedHttpMethod, String encodedUrl, Map<String, String> parameters) {
+        TreeMap<String, String> sortedParameters = new TreeMap<>(parameters);
+        StringBuilder parameterString = new StringBuilder();
+        for (Map.Entry<String, String> entry : sortedParameters.entrySet()) {
+            if (parameterString.length() > 0) {
+                parameterString.append('&');
+            }
+            parameterString.append(entry.getKey());
+            parameterString.append('=');
+            parameterString.append(entry.getValue());
+        }
+
+        StringBuilder baseString = new StringBuilder();
+        baseString.append(encodedHttpMethod.toUpperCase());
+        baseString.append('&');
+        baseString.append(encodedUrl);
+        baseString.append('&');
+        baseString.append(URLEncoder.encode(parameterString.toString(), StandardCharsets.UTF_8.name()));
+
+        return baseString.toString();
+    }
+
+    @SneakyThrows
+    String generateSignature(String baseString, String key) {
+        SecretKeySpec secretKeySpec = new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+        Mac mac = Mac.getInstance("HmacSHA256");
+        mac.init(secretKeySpec);
+        byte[] signatureBytes = mac.doFinal(baseString.getBytes(StandardCharsets.UTF_8));
+        return URLEncoder.encode(Base64.getEncoder().encodeToString(signatureBytes), StandardCharsets.UTF_8.toString());
+    }
+
+    @SneakyThrows
+    String encodeKey(String consumerSecret, String tokenSecret) {
+        String encodedConsumerSecret = URLEncoder.encode(consumerSecret, StandardCharsets.UTF_8.name());
+        String encodedTokenSecret = URLEncoder.encode(tokenSecret, StandardCharsets.UTF_8.name());
+        return encodedConsumerSecret + "&" + encodedTokenSecret;
     }
 
     @SneakyThrows
@@ -165,19 +259,19 @@ public class NetSuiteRestSdk {
     }
 
     @SneakyThrows
-    protected CreateInvoiceResponse getRequestWrappedV2(HttpRequest request) {
+    protected Response getRequestWrappedV2(HttpRequest request) {
 
         return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
             .thenComposeAsync(response -> tryResend(client, request, HttpResponse.BodyHandlers.ofString(), response, 1))
             .thenApplyAsync(stringHttpResponse -> {
                 String body = stringHttpResponse.body();
-                CreateInvoiceResponse createInvoiceResponse = new CreateInvoiceResponse();
-                createInvoiceResponse.setStatus(stringHttpResponse.statusCode());
+                Response response = new Response();
+                response.setStatus(stringHttpResponse.statusCode());
 
                 if (body != null && !body.isEmpty()) {
-                    createInvoiceResponse = convertBody(body, CreateInvoiceResponse.class);
+                    response = convertBody(body, Response.class);
                 }
-                return createInvoiceResponse;
+                return response;
             })
             .get();
     }
