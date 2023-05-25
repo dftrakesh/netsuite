@@ -3,7 +3,7 @@ package com.dft.netsuite;
 import com.dft.netsuite.handler.JsonBodyHandler;
 import com.dft.netsuite.model.credentials.AccessToken;
 import com.dft.netsuite.model.credentials.Credentials;
-import com.dft.netsuite.model.invoice.CreateInvoiceResponse;
+import com.dft.netsuite.model.invoice.Response;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
 
@@ -259,19 +259,19 @@ public class NetSuiteRestSdk {
     }
 
     @SneakyThrows
-    protected CreateInvoiceResponse getRequestWrappedV2(HttpRequest request) {
+    protected Response getRequestWrappedV2(HttpRequest request) {
 
         return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
             .thenComposeAsync(response -> tryResend(client, request, HttpResponse.BodyHandlers.ofString(), response, 1))
             .thenApplyAsync(stringHttpResponse -> {
                 String body = stringHttpResponse.body();
-                CreateInvoiceResponse createInvoiceResponse = new CreateInvoiceResponse();
-                createInvoiceResponse.setStatus(stringHttpResponse.statusCode());
+                Response response = new Response();
+                response.setStatus(stringHttpResponse.statusCode());
 
                 if (body != null && !body.isEmpty()) {
-                    createInvoiceResponse = convertBody(body, CreateInvoiceResponse.class);
+                    response = convertBody(body, Response.class);
                 }
-                return createInvoiceResponse;
+                return response;
             })
             .get();
     }

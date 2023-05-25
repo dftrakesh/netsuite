@@ -8,7 +8,7 @@ import java.util.List;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class CreateInvoiceResponse {
+public class Response {
 
     private String type;
     private String title;
