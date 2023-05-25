@@ -226,6 +226,23 @@ public class NetSuiteRestSdk {
     }
 
     @SneakyThrows
+    protected HttpRequest patch(URI uri, String jsonBody) {
+        getAccessCredentials();
+        return HttpRequest.newBuilder(uri)
+            .header(CONTENT_TYPE, APPLICATION_JSON)
+            .header(AUTHORIZATION, BEARER + credentials.getAccessToken())
+            .header(ACCEPT, APPLICATION_JSON)
+            .method("PATCH", HttpRequest.BodyPublishers.ofString(jsonBody))
+            .build();
+    }
+
+    @SneakyThrows
+    protected HttpRequest patch(URI uri, Object body) {
+        String jsonBody = objectMapper.writeValueAsString(body);
+        return patch(uri, jsonBody);
+    }
+
+    @SneakyThrows
     protected URI baseUrl(String path) {
         return new URI(netSuiteDomain + path);
     }
