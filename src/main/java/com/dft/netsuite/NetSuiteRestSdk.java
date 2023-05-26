@@ -108,15 +108,9 @@ public class NetSuiteRestSdk {
 
     @SneakyThrows
     public HttpRequest get(URI uri) {
-        getAccessCredentials();
-        String authorizationHeader = BEARER + credentials.getAccessToken();
-        if (credentials.getTokenBasedAuthentication()) {
-            authorizationHeader = getAuthorizationHeader(uri);
-        }
-
         return HttpRequest.newBuilder(uri)
             .header(CONTENT_TYPE, X_WWW_FORM_URLENCODED)
-            .header(AUTHORIZATION, authorizationHeader)
+            .header(AUTHORIZATION, getAuthorization(uri))
             .header(ACCEPT, APPLICATION_JSON)
             .GET()
             .build();
@@ -205,10 +199,10 @@ public class NetSuiteRestSdk {
 
     @SneakyThrows
     protected HttpRequest post(URI uri, String jsonBody) {
-        getAccessCredentials();
         return HttpRequest.newBuilder(uri)
+            .header("Prefer", "transient")
             .header(CONTENT_TYPE, APPLICATION_JSON)
-            .header(AUTHORIZATION, BEARER + credentials.getAccessToken())
+            .header(AUTHORIZATION, getAuthorization(uri))
             .header(ACCEPT, APPLICATION_JSON)
             .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
             .build();
@@ -221,11 +215,20 @@ public class NetSuiteRestSdk {
     }
 
     @SneakyThrows
-    protected HttpRequest patch(URI uri, String jsonBody) {
+    protected String getAuthorization(URI uri) {
         getAccessCredentials();
+        String authorizationHeader = BEARER + credentials.getAccessToken();
+        if (credentials.getTokenBasedAuthentication()) {
+            authorizationHeader = getAuthorizationHeader(uri);
+        }
+        return authorizationHeader;
+    }
+
+    @SneakyThrows
+    protected HttpRequest patch(URI uri, String jsonBody) {
         return HttpRequest.newBuilder(uri)
             .header(CONTENT_TYPE, APPLICATION_JSON)
-            .header(AUTHORIZATION, BEARER + credentials.getAccessToken())
+            .header(AUTHORIZATION, getAuthorization(uri))
             .header(ACCEPT, APPLICATION_JSON)
             .method("PATCH", HttpRequest.BodyPublishers.ofString(jsonBody))
             .build();
