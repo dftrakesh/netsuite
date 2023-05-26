@@ -100,10 +100,11 @@ public class NetSuiteRestSdk {
     }
 
     @SneakyThrows
-    public void getAccessCredentials() {
+    public Credentials getAccessCredentials() {
         if (credentials.getExpireAt() != null && !LocalDateTime.now().isAfter(credentials.getExpireAt()))
-            return;
+            return credentials;
         if (credentials.getRefreshToken() != null) refreshToken();
+        return credentials;
     }
 
     @SneakyThrows
