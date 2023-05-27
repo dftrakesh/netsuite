@@ -1,10 +1,15 @@
 package com.dft.netsuite;
 
 import com.dft.netsuite.handler.JsonBodyHandler;
+import com.dft.netsuite.handler.NSApi;
 import com.dft.netsuite.model.credentials.AccessToken;
-import com.dft.netsuite.model.credentials.Credentials;
+import com.dft.netsuite.model.credentials.NetSuiteCredentials;
 import com.dft.netsuite.model.invoice.Response;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.scribejava.core.builder.ServiceBuilder;
+import com.github.scribejava.core.model.OAuth1AccessToken;
+import com.github.scribejava.core.model.OAuthRequest;
+import com.github.scribejava.core.oauth.OAuth10aService;
 import lombok.SneakyThrows;
 
 import javax.crypto.Mac;
@@ -38,17 +43,19 @@ public class NetSuiteRestSdk {
     protected final HttpClient client;
     protected final String netSuiteDomain;
     protected final ObjectMapper objectMapper;
-    protected final Credentials credentials;
-
+    protected final NetSuiteCredentials credentials;
+    private final OAuth10aService auth10aService;
     int MAX_ATTEMPTS = 50;
     int TIME_OUT_DURATION = 60000;
 
     @SneakyThrows
-    public NetSuiteRestSdk(Credentials credentials) {
+    public NetSuiteRestSdk(NetSuiteCredentials credentials) {
         this.objectMapper = new ObjectMapper();
         this.client = HttpClient.newHttpClient();
         this.credentials = credentials;
         this.netSuiteDomain = "https://" + this.credentials.getInstanceId() + ".suitetalk.api.netsuite.com";
+        this.auth10aService = new ServiceBuilder(credentials.getConsumerKey()).apiSecret(credentials.getConsumerSecret())
+                .build(new NSApi());
     }
 
     @SneakyThrows
@@ -61,6 +68,11 @@ public class NetSuiteRestSdk {
         return getToken(data);
     }
 
+    @SneakyThrows
+    protected String signAndExecute(OAuthRequest request) {
+        auth10aService.signRequest(new OAuth1AccessToken(credentials.getTokenId(), credentials.getTokenSecret()), request);
+        return auth10aService.execute(request).getBody();
+    }
     @SneakyThrows
     public void refreshToken() {
         Map<Object, Object> data = new HashMap<>();
@@ -99,19 +111,26 @@ public class NetSuiteRestSdk {
         return accessToken;
     }
 
-    @SneakyThrows
-    public Credentials getAccessCredentials() {
+    public void getAccessCredentials() {
         if (credentials.getExpireAt() != null && !LocalDateTime.now().isAfter(credentials.getExpireAt()))
-            return credentials;
+            return;
         if (credentials.getRefreshToken() != null) refreshToken();
-        return credentials;
     }
 
     @SneakyThrows
     public HttpRequest get(URI uri) {
+        getAccessCredentials();
+
+        String authorizationHeader;
+        if (credentials.getTokenBasedAuthentication()) {
+           authorizationHeader = getAuthorizationHeader(uri);
+        } else {
+            authorizationHeader = BEARER + credentials.getAccessToken();
+        }
+
         return HttpRequest.newBuilder(uri)
             .header(CONTENT_TYPE, X_WWW_FORM_URLENCODED)
-            .header(AUTHORIZATION, getAuthorization(uri))
+            .header(AUTHORIZATION, authorizationHeader)
             .header(ACCEPT, APPLICATION_JSON)
             .GET()
             .build();
@@ -122,7 +141,7 @@ public class NetSuiteRestSdk {
         String encodedUrl = URLEncoder.encode(uri.toString(), StandardCharsets.UTF_8);
         String encodedHttpMethod = "GET";
         String consumerKey = credentials.getConsumerKey();
-        String nonce = "" + (int) (Math.random() * 100000000);
+        String nonce = String.valueOf((int) (Math.random() * 100000000));
         String signatureMethod = "HMAC-SHA256";
         String timestamp = String.valueOf(System.currentTimeMillis() / 1000);
         String tokenKey = credentials.getTokenId();
@@ -141,7 +160,7 @@ public class NetSuiteRestSdk {
         String key = encodeKey(consumerSecret, tokenSecret);
         String signature = generateSignature(baseString, key);
 
-        String authorizationHeader = "OAuth oauth_consumer_key=\"" +
+        return "OAuth oauth_consumer_key=\"" +
                 consumerKey +
                 "\", oauth_token=\"" +
                 tokenKey +
@@ -158,11 +177,8 @@ public class NetSuiteRestSdk {
                 "\", oauth_signature=\"" +
                 signature +
                 "\"";
-
-        return authorizationHeader;
     }
 
-    @SneakyThrows
     String generateSignatureBaseString(String encodedHttpMethod, String encodedUrl, Map<String, String> parameters) {
         TreeMap<String, String> sortedParameters = new TreeMap<>(parameters);
         StringBuilder parameterString = new StringBuilder();
@@ -200,10 +216,10 @@ public class NetSuiteRestSdk {
 
     @SneakyThrows
     protected HttpRequest post(URI uri, String jsonBody) {
+        getAccessCredentials();
         return HttpRequest.newBuilder(uri)
-            .header("Prefer", "transient")
             .header(CONTENT_TYPE, APPLICATION_JSON)
-            .header(AUTHORIZATION, getAuthorization(uri))
+            .header(AUTHORIZATION, BEARER + credentials.getAccessToken())
             .header(ACCEPT, APPLICATION_JSON)
             .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
             .build();
@@ -216,20 +232,11 @@ public class NetSuiteRestSdk {
     }
 
     @SneakyThrows
-    protected String getAuthorization(URI uri) {
-        getAccessCredentials();
-        String authorizationHeader = BEARER + credentials.getAccessToken();
-        if (credentials.getTokenBasedAuthentication()) {
-            authorizationHeader = getAuthorizationHeader(uri);
-        }
-        return authorizationHeader;
-    }
-
-    @SneakyThrows
     protected HttpRequest patch(URI uri, String jsonBody) {
+        getAccessCredentials();
         return HttpRequest.newBuilder(uri)
             .header(CONTENT_TYPE, APPLICATION_JSON)
-            .header(AUTHORIZATION, getAuthorization(uri))
+            .header(AUTHORIZATION, BEARER + credentials.getAccessToken())
             .header(ACCEPT, APPLICATION_JSON)
             .method("PATCH", HttpRequest.BodyPublishers.ofString(jsonBody))
             .build();
@@ -241,9 +248,8 @@ public class NetSuiteRestSdk {
         return patch(uri, jsonBody);
     }
 
-    @SneakyThrows
     protected URI baseUrl(String path) {
-        return new URI(netSuiteDomain + path);
+        return URI.create(netSuiteDomain + path);
     }
 
     @SneakyThrows
@@ -293,7 +299,7 @@ public class NetSuiteRestSdk {
     }
 
     @SneakyThrows
-    private <T> T convertBody(String body, Class<T> tClass) {
+    protected  <T> T convertBody(String body, Class<T> tClass) {
         return objectMapper.readValue(body, tClass);
     }
 
@@ -330,5 +336,10 @@ public class NetSuiteRestSdk {
             builder.append(entry.getValue().toString());
         }
         return HttpRequest.BodyPublishers.ofString(builder.toString());
+    }
+
+    @SneakyThrows
+    protected String getString(Object o) {
+        return objectMapper.writeValueAsString(o);
     }
 }

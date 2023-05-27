@@ -1,7 +1,7 @@
 package com.dft.netsuite;
 
 import com.dft.netsuite.model.invoice.Response;
-import com.dft.netsuite.model.credentials.Credentials;
+import com.dft.netsuite.model.credentials.NetSuiteCredentials;
 import com.dft.netsuite.model.invoice.InvoiceRequest;
 import lombok.SneakyThrows;
 
@@ -12,7 +12,7 @@ import static com.dft.netsuite.constants.ConstantCode.INVOICE_ENDPOINT;
 
 public class NetSuiteInvoice extends NetSuiteRestSdk {
 
-    public NetSuiteInvoice(Credentials credentials) {
+    public NetSuiteInvoice(NetSuiteCredentials credentials) {
         super(credentials);
     }
 
