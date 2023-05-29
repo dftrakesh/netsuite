@@ -2,9 +2,9 @@ package com.dft.netsuite;
 
 import com.dft.netsuite.handler.JsonBodyHandler;
 import com.dft.netsuite.handler.NSApi;
+import com.dft.netsuite.model.commons.Response;
 import com.dft.netsuite.model.credentials.AccessToken;
 import com.dft.netsuite.model.credentials.NetSuiteCredentials;
-import com.dft.netsuite.model.invoice.Response;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.scribejava.core.builder.ServiceBuilder;
 import com.github.scribejava.core.model.OAuth1AccessToken;
@@ -14,6 +14,9 @@ import lombok.SneakyThrows;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -21,9 +24,12 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -35,6 +41,7 @@ import static com.dft.netsuite.constants.ConstantCode.AUTHORIZE_ENDPOINT;
 import static com.dft.netsuite.constants.ConstantCode.BEARER;
 import static com.dft.netsuite.constants.ConstantCode.CONTENT_TYPE;
 import static com.dft.netsuite.constants.ConstantCode.OAUTH_VERSION;
+import static com.dft.netsuite.constants.ConstantCode.SUCCESS;
 import static com.dft.netsuite.constants.ConstantCode.TOKEN_ENDPOINT;
 import static com.dft.netsuite.constants.ConstantCode.X_WWW_FORM_URLENCODED;
 
@@ -69,10 +76,11 @@ public class NetSuiteRestSdk {
     }
 
     @SneakyThrows
-    protected String signAndExecute(OAuthRequest request) {
+    protected com.github.scribejava.core.model.Response signAndExecute(OAuthRequest request) {
         auth10aService.signRequest(new OAuth1AccessToken(credentials.getTokenId(), credentials.getTokenSecret()), request);
-        return auth10aService.execute(request).getBody();
+        return auth10aService.execute(request);
     }
+
     @SneakyThrows
     public void refreshToken() {
         Map<Object, Object> data = new HashMap<>();
@@ -299,7 +307,7 @@ public class NetSuiteRestSdk {
     }
 
     @SneakyThrows
-    protected  <T> T convertBody(String body, Class<T> tClass) {
+    protected <T> T convertBody(String body, Class<T> tClass) {
         return objectMapper.readValue(body, tClass);
     }
 
@@ -341,5 +349,36 @@ public class NetSuiteRestSdk {
     @SneakyThrows
     protected String getString(Object o) {
         return objectMapper.writeValueAsString(o);
+    }
+
+    @SneakyThrows
+    protected com.dft.netsuite.model.commons.Response getResponse(com.github.scribejava.core.model.Response res) {
+        com.dft.netsuite.model.commons.Response response = new com.dft.netsuite.model.commons.Response();
+        response.setStatus(res.getCode());
+        response.setTitle(SUCCESS);
+
+        String body = res.getBody();
+        if (body != null && !body.isEmpty()) {
+            response = convertBody(body, com.dft.netsuite.model.commons.Response.class);
+        }
+        return response;
+    }
+
+    @SneakyThrows
+    protected void allowMethods(String... methods) {
+        Field methodsField = HttpURLConnection.class.getDeclaredField("methods");
+
+        Field modifiersField = Field.class.getDeclaredField("modifiers");
+        modifiersField.setAccessible(true);
+        modifiersField.setInt(methodsField, methodsField.getModifiers() & ~Modifier.FINAL);
+
+        methodsField.setAccessible(true);
+
+        String[] oldMethods = (String[]) methodsField.get(null);
+        Set<String> methodsSet = new LinkedHashSet<>(Arrays.asList(oldMethods));
+        methodsSet.addAll(Arrays.asList(methods));
+        String[] newMethods = methodsSet.toArray(new String[0]);
+
+        methodsField.set(null, newMethods);
     }
 }
