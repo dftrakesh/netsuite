@@ -12,4 +12,5 @@ public interface ConstantCode {
     String BEARER ="Bearer ";
     String ACCEPT ="Accept";
     String APPLICATION_JSON ="application/json";
+    String SUCCESS ="SUCCESS";
 }

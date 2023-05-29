@@ -1,4 +1,4 @@
-package com.dft.netsuite.model.invoice;
+package com.dft.netsuite.model.commons;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
