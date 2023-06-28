@@ -16,6 +16,11 @@ public class InvoiceRequest {
     private String ecommerceId;
 
     private String otherRefNum;
+    private String terms;
+
+    @JsonProperty("custbody_njt_incoterms")
+    private String custbodyNjtIncoterms;
+
     private ItemRoot item;
     private IdFiled location;
     private String salesEffectiveDate;
