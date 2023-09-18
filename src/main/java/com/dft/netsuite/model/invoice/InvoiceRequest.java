@@ -8,6 +8,7 @@ import lombok.Data;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class InvoiceRequest {
 
+    private IdFiled customform;
     private IdFiled account;
     private IdFiled currency;
     private IdFiled entity;
