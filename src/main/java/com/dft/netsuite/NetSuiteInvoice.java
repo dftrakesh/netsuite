@@ -29,4 +29,17 @@ public class NetSuiteInvoice extends NetSuiteRestSdk {
         Response res = signAndExecute(request);
         return getResponse(res);
     }
+
+    @SneakyThrows
+    public com.dft.netsuite.model.commons.Response updateInvoice(InvoiceRequest invoiceRequest, Long invoiceId) {
+        allowMethods("PATCH");
+        OAuthRequest request = new OAuthRequest(Verb.PATCH, netSuiteDomain + INVOICE_ENDPOINT + "/" + invoiceId);
+        request.setRealm(credentials.getRealm());
+        request.addHeader(CONTENT_TYPE, APPLICATION_JSON);
+        request.addHeader(ACCEPT, APPLICATION_JSON);
+        request.setPayload(getString(invoiceRequest));
+
+        Response res = signAndExecute(request);
+        return getResponse(res);
+    }
 }

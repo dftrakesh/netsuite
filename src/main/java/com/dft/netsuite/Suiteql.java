@@ -2,6 +2,7 @@ package com.dft.netsuite;
 
 import com.dft.netsuite.model.credentials.NetSuiteCredentials;
 import com.github.scribejava.core.model.OAuthRequest;
+import com.github.scribejava.core.model.Response;
 import com.github.scribejava.core.model.Verb;
 import lombok.SneakyThrows;
 
@@ -24,11 +25,23 @@ public class Suiteql extends NetSuiteRestSdk {
         request.addHeader("Prefer", "transient");
         request.setPayload(getString(Map.of("q", query)));
 
-        return signAndExecute(request).getBody();
+        return tryResend(request, 0);
     }
 
     public <T> T executeQuery(String query, Class<T> tClass) {
         String response = executeQuery(query);
         return convertBody(response, tClass);
+    }
+
+    @SneakyThrows
+    public String tryResend(OAuthRequest request, int count) {
+
+        Response response = signAndExecute(request);
+
+        if (response.getCode() == 429 && count < MAX_ATTEMPTS) {
+            Thread.sleep(TIME_OUT_DURATION);
+            return tryResend(request, count + 1);
+        }
+        return response.getBody();
     }
 }
