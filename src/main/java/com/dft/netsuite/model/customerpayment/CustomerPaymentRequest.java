@@ -26,4 +26,7 @@ public class CustomerPaymentRequest {
 
     @JsonProperty("memo")
     private String memo;
+
+    @JsonProperty("trandate")
+    private String tranDate;
 }
