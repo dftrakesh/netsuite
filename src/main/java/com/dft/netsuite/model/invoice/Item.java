@@ -7,6 +7,7 @@ import lombok.Data;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Item {
 
+    private IdFiled department;
     private InventoryDetail inventoryDetail;
     private IdFiled item;
     private Integer line;
