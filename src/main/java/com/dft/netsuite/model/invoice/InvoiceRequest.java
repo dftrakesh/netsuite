@@ -22,6 +22,8 @@ public class InvoiceRequest {
     @JsonProperty("custbody_njt_incoterms")
     private String custbodyNjtIncoterms;
 
+    private IdFiled department;
+
     @JsonProperty("custbody_njt_seller_cloud_order_id")
     private String sellerCloudOrderId;
 
