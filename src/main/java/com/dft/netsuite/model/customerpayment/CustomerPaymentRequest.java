@@ -29,4 +29,7 @@ public class CustomerPaymentRequest {
 
     @JsonProperty("trandate")
     private String tranDate;
+
+    @JsonProperty("department")
+    private IdFiled department;
 }
