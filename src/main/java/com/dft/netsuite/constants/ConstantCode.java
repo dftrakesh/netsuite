@@ -7,6 +7,7 @@ public interface ConstantCode {
     String INVOICE_ENDPOINT = "/services/rest/record/v1/invoice";
     String CREDIT_MEMO_ENDPOINT = "/services/rest/record/v1/creditMemo";
     String CUSTOMER_PAYMENT_ENDPOINT = "/services/rest/record/v1/customerPayment";
+    String CUSTOMER_REFUND_ENDPOINT = "/services/rest/record/v1/customerRefund";
     String CONTENT_TYPE ="Content-Type";
     String X_WWW_FORM_URLENCODED ="application/x-www-form-urlencoded";
     String AUTHORIZATION ="Authorization";
