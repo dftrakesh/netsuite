@@ -10,6 +10,7 @@ import lombok.Data;
 public class CustomerRefundRequest {
 
     private IdFiled customer;
+    private IdFiled account;
     private String memo;
     private Apply apply;
     private IdFiled location;
