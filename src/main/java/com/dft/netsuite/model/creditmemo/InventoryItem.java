@@ -14,4 +14,6 @@ public class InventoryItem {
     private IdFiled item;
     private Integer quantity;
     private Double rate;
+    private IdFiled location;
+    private IdFiled department;
 }
