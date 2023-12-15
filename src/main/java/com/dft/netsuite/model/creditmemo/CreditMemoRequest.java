@@ -10,4 +10,5 @@ public class CreditMemoRequest {
 
     private IdFiled department;
     private CreditMemoItemRoot item;
+    private String memo;
 }
